@@ -1,0 +1,41 @@
+---
+title: "R-MySQL2"
+author: "Marco Siqueira Campos"
+date: "5 de setembro de 2016"
+output: pdf_document
+---
+
+
+DATA 607 
+Assignment R MySQL
+
+**Solution with R MySQL ODBC connection.**   
+
+Load RODBC
+
+```{r, load_rodbc}
+library(RODBC)
+```
+
+MySQL connection
+
+```{r, connection}
+db<-odbcConnect("mysql_2", uid="root")
+```
+
+Read the database to a data frame.
+
+```{r, read_db}
+df2<-sqlQuery(db, "select * from tbl_movie")
+```
+
+Check de data frame.
+```{r, check}
+str(df2)
+```
+
+close connection
+```{r, close}
+odbcClose(db)
+```
+
