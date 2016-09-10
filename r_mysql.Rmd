@@ -1,0 +1,46 @@
+---
+title: "R-MySQL"
+author: "Marco Siqueira Campos"
+date: "5 de setembro de 2016"
+output: pdf_document
+---
+
+DATA 607 
+Assignment R MySQL
+
+**Solution with R MySQL direct connection.**   
+
+link to all files at Github
+
+[Github repository](https://github.com/MarcoSCampos/DATA_607)
+
+Load RMySQL
+
+```{r, load_rmysql}
+library(RMySQL)
+```
+
+MySQL connection
+
+```{r, connection}
+rmysql.settingsfile<-"C:/ProgramData/MySQL/MySQL Server 5.7/my.ini"
+con <- dbConnect(RMySQL::MySQL(), default.file=rmysql.settingsfile, dbname = "sql_r", username=NULL, password=NULL)
+
+```
+
+Read the database to a data frame.
+
+```{r, read_db}
+df<- dbReadTable(conn = con, name = 'tbl_movie')
+```
+
+Check de data frame.
+```{r, check}
+str(df)
+```
+
+Close connection
+```{r, close}
+dbDisconnect(con)
+
+```
