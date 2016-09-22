@@ -5,3 +5,5 @@
 ### week 2 assignment - file: r_mysql2.rmd - RODBC solution - Rmarkdown file (this is only for test and learning)
 ### week 2 assignment - file: r_mysql.pdf - RMySQL solution - pdf file
 ### week 2 assignment - file: r_mysql2.pdf - RODBC solution - pdf file (this is only for test and learning)
+
+### week 3 assignment Project 1 SiqueiraCampos-proj1.Rmd
