@@ -1,0 +1,122 @@
+---
+title: "Siqueira Campos project 1"
+author: "Marco Siqueira Campos"
+date: "23 de setembro de 2016"
+output: pdf_document
+---
+
+ 
+ASSIGNMENT 1 : PROJECT 1  
+R Character Manipulation and Date Processing  
+github [link](https://github.com/MarcoSCampos/DATA_607)
+
+DATA 607
+MSDA CUNY
+
+Program Flow
+
+![R script flow](c:/Users/SiqueiraCampos2/Documents/fluxoa.png)
+
+Load Library
+```{r load_library, warning=FALSE}
+library(reshape)
+library(stringr)
+```
+
+Load Function, function to calculate opponent average ratings
+```{r load_function}
+meanopo<-function(i){
+        mean(c(newdf[newdf[i,7],5],newdf[newdf[i,8],5],newdf[newdf[i,9],5]
+        ,newdf[newdf[i,10],5],newdf[newdf[i,11],5],newdf[newdf[i,12],5],
+        newdf[newdf[i,13],5]), na.rm=TRUE)
+        }
+```
+
+Read some files of text file
+```{r read_text}
+start_rows<-seq(4,193,3)
+data_list<-lapply(start_rows, function(skip)
+        {
+read.table("~/tournamentinfo.txt", sep="|", skip = skip, nrows=2, stringsAsFactors = FALSE)        
+                 })
+```
+
+Merge all data frames
+```{r merge_dataframes}
+df2<-merge_all(data_list)
+```   
+
+Back to original order
+```{r order}
+df3<-df2[ order(as.numeric(row.names(df2))), ]
+```   
+
+Create new data frame
+```{r new_dataframes}
+newdf=data.frame(matrix(vector(),64, 13,
+                        dimnames=list(c(), c("id","player","state","points","pre", "opon",
+                        "r1","r2","r3","r4","r5","r6","r7"))),stringsAsFactors = FALSE)
+
+``` 
+
+Data cleaning
+```{r cleaning}
+newdf$id<-c(1:64)
+newdf$player<-str_trim(df3[seq(1,127,2),2], side="both")
+newdf$state<-str_trim(df3[seq(2,128,2),1], side="both") 
+newdf$points<-str_trim(df3[seq(1,127,2),3], side="both")
+newdf$pre<-as.numeric((str_sub(df3[seq(2,128,2),2], start=16, end=19))) 
+newdf$r1<-as.numeric(str_sub(df3[seq(1,127,2),4], start=4, end=5))        
+newdf$r2<-as.numeric(str_sub(df3[seq(1,127,2),5], start=4, end=5)) 
+newdf$r3<-as.numeric(str_sub(df3[seq(1,127,2),6], start=4, end=5)) 
+newdf$r4<-as.numeric(str_sub(df3[seq(1,127,2),7], start=4, end=5)) 
+newdf$r5<-as.numeric(str_sub(df3[seq(1,127,2),8], start=4, end=5)) 
+newdf$r6<-as.numeric(str_sub(df3[seq(1,127,2),9], start=4, end=5)) 
+newdf$r7<-as.numeric(str_sub(df3[seq(1,127,2),10], start=4, end=5)) 
+```
+
+calculate opponents mean
+```{r opponents}
+for(i in 1:64){
+        newdf[i,6]<-round(meanopo(i))        
+        }
+```
+
+check new data frame
+
+```{r newdata_frame}
+head(newdf)
+```
+
+### SOLUTION
+save file as csv 
+
+```{r save_csv}
+write.table(newdf[,c(2,3,4,5,6)], "~/tournamentinfo.csv",
+            row.names=F, col.names=F, na="", quote=F, sep=",")
+```
+
+check the solution see raw data
+```{r raw_data}
+scan("~/tournamentinfo.csv",what="character",sep="\n", quiet=TRUE)
+```
+
+check solution data ready to do in a table
+```{r check}
+read.table("~/tournamentinfo.csv", sep=",")
+```
+
+change data to chart
+```{r pre_graph}
+gfdf<-t(data.frame(c(newdf[1:64,c(5,6)])))
+colnames(gfdf)<-t(newdf[1:64,2])
+```
+
+Player's rating barchart
+```{r graph, fig.width=6, fig.height=9 }
+par(mar=c(4,12,2,2))
+barplot(gfdf, beside=T, main="Player's rating", xlab = "rating", 
+        horiz = TRUE, cex.names=0.6, las=2, col=c("black","white"))
+legend("topright",legend=c("player","oppon"), bty="n",fill=c("black","white"), col=1:2)
+box(bty="l")
+```
