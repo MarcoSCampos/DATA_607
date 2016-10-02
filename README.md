@@ -8,6 +8,6 @@
 
 ### week 3 assignment Project 1 SiqueiraCampos-proj1.Rmd
 
-### week 5 assignment - tidy - file: MASC-SQL-TD - MySQL script to  create csv airline 
+### week 5 assignment - tidy - file: MASC-SQL-TD.sql - MySQL script to  create csv airline 
 ### week 5 assignment - tidy - file: SiqueiraCampos_wk5.rmd - Rmarkdown file
 ### week 5 assignment - tidy - file: SiqueiraCampos_wk5.html - html file
