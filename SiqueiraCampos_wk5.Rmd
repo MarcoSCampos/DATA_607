@@ -1,0 +1,126 @@
+---
+title: "SiqueiraCampos_wk5"
+author: "Marco Siqueira Campos"
+date: "1 de outubro de 2016"
+output: html_document
+---
+
+DATA 607
+MSDA CUNY
+
+ASSIGNMENT WK5   
+Tidying and Transforming Data
+
+github [link](https://github.com/MarcoSCampos/DATA_607)
+
+Load Library
+```{r load_library, warning=FALSE, message=FALSE}
+library(tidyr)
+library(dplyr)
+library(lattice)
+```
+
+**1- Create .CSV file**  
+The file was created in MySQL database and the script is available
+at Github link, see above.
+
+**2- Read .CSV file**
+
+Read and check csv file
+```{r read_csv}
+df_td<-read.table("~/mysql_td.csv", sep=",", stringsAsFactors = FALSE)
+df_td
+```
+
+Cleannig the file:
+
+remove unnecessary rows
+```{r remove_rows}
+df_td<-df_td[-c(1,5),]
+```
+adjust the column names and reply (fill the spaces) at the airline name
+```{r column}
+df_td[3,1]<-'ALASKA'
+df_td[5,1]<-'AMWEST'
+colnames(df_td)[3:7]<-df_td[1,3:7]
+df_td<-df_td[-1,]
+```
+check the results
+```{r check}
+df_td
+```
+
+The data is not tidy, we have variable in rows and the same variable in several columns.  
+The next steps is to data tidy.
+
+First step is the gather the data
+```{r gather}
+df_td2<-gather(df_td,"city","time",3:7)
+colnames(df_td2)[1]<-"airline"
+```
+Removing the comma at the data and change from character to numeric.
+```{r comma_rem}
+df_td2$time<-as.numeric(gsub(",","",df_td2$time))
+```
+Check the results
+```{r check2}
+df_td2
+```
+Spreading one variable, we have one column mixing two variables, V2. 
+```{r spread}
+df_td3<-spread(df_td2,V2,time)
+```
+Change one name to facilitate data manipulation.  
+Change 'airline' to factor.  
+Check the results, data is tidy.  
+```{r tidy}
+df_td3['airline']<-lapply(df_td3['airline'], factor)
+colnames(df_td3)[4]<-"on_time"
+df_td3
+```
+The data now is tidy.
+
+**3-Perform analysis to compare the arrival delays for the two airlines.**
+
+Add one more column to analyse the performance, on time arrival proportion
+
+On time proportion.
+```{r add_column}
+df_td3<-mutate(df_td3, ontime_pro=round((on_time/(on_time+ delayed)*100), digits=1))
+df_td3
+```
+
+The first step is analyse the aggregated data about arrival delayed data by airline.
+
+On time proportion by airline. 
+```{r proportion_on_time}
+df_td3%>% 
+   group_by(airline)%>%         
+   summarise(count=round(100*(sum(on_time)/(sum(delayed)+sum(on_time))), digits=1))
+
+```
+The aggregated data show the performance about on time arrival, the AMWEST airline is better, had 89.1% at on time arrival.
+
+Next step is check the partioned data by city.
+```{r proportion_city}
+df_td3%>% 
+   group_by(airline, city)%>%         
+   summarise(count=round(100*(sum(on_time)/(sum(delayed)+sum(on_time))), digits=1))
+
+```
+To improve the data analysis is better to see the data in barplot graph.
+```{r graph_bycity}
+barchart(ontime_pro~city, data=df_td3, groups=airline, main="on time arrival proportion by city", 
+         auto.key = list(x = .7, y = .85, corner = c(0, 0), pch=22), ylab="on time proportion")
+
+```
+
+The table and the graphs show the performance in on time arrival partitioned by city, the ALASKA airline is better.
+
+The results is apparently confused, in aggregate data AMWEST is better however when the data is partitioned by city ALASKA is better. 
+We had here in the data the effects of Simpson's paradox, in which a trend appears in different groups of data but reverses when theses groups is combined.
+See more about Simpson's paradox [wikipedia](https://en.wikipedia.org/wiki/Simpson%27s_paradox)
+
+In this assignment the root cause is due the data unbalance, the quantity of AMWEST flights at Phoenix, 5255, this leads a data distortion, when the data are aggredated. 
+
+In the performance by city, we can say that ALASKA airline has a better performance at on time arrival, for this reason I can say that the ALASKA airline has better performance.
