@@ -11,3 +11,4 @@
 ### week 5 assignment - tidy - file: MASC-SQL-TD.sql - MySQL script to  create csv airline 
 ### week 5 assignment - tidy - file: SiqueiraCampos_wk5.rmd - Rmarkdown file
 ### week 5 assignment - tidy - file: SiqueiraCampos_wk5.html - html file
+### week 10 assignment Doc classification - email classification - Rmarkdown file
