@@ -1,0 +1,275 @@
+---
+title: "Assignment wk10 Doc Classification"
+#author: "Marco Siqueira Campos" 
+#date: "2 de novembro de 2016"
+mainfont: Arial
+output: html_document
+---
+
+####*<span style="color:blue">Marco Siqueira Campos</span>, November 5th, 2016* 
+
+
+####DATA 607  
+####MSDA CUNY
+
+github [link](https://github.com/MarcoSCampos/DATA_607)
+
+### **INTRODUCTION**
+Classification email spam assignment, this is a typical classification application, correctly classify spam email from that are not sapm called ham. It is a real trouble, it is estimated that 80-90% of all emal is spam.
+For this assignment I will take advantage of my knowledge^1^ ^2^ and previous experience in text mining projects. 
+Due past experience I will not use cleaning with TM package, this decrease the final performance, for this I used classical Regex of my library and web.  
+To carry out the classification were chosen two techniques in order to compare the performace and use the best for classification, two techniques were chosen with very different approaches, one of classical statistics, logistic regression and the other a recent technique, 1995^3^, random forest, associated with what is now called machine learning.
+
+
+#### **Data Source**
+The data source from [https://spamassassin.apache.org/publiccorpus/](https://spamassassin.apache.org/publiccorpus/)
+
+
+#### **Load package library**
+Library required for the assignment
+```{r library, eval=FALSE}
+library(tm)
+library(stringi)
+library(SnowballC)
+library(caTools)
+library(randomForest)
+library(pROC)
+```  
+#### **Load functions**
+
+The the function `get.msg()` is for read text, the function `get.all()` is for read all files in a folder except "cmds", this two functions are very popular in the web^4^.
+
+```{r functions, eval=FALSE}
+get.msg <- function(path.dir) {
+        con <- file(path.dir, open="rt", encoding="latin1")
+        text <- readLines(con)
+        msg <- text[seq(which(text=="")[1]+1,length(text),1)]
+        close(con)
+        return(paste(msg, collapse ="\n"))
+}
+get.all<-function(path.dir){
+        all.file<-dir(path.dir)
+        all.file<-all.file[which(all.file!="cmds")]
+        msg.all<-sapply(all.file,function(p) get.msg(paste0(path.dir,p)))
+        }
+```  
+For cleaning and standardization a Regex function was used, has several goals:
+Among them, expand all main english contractions, remove all extraneous characters, generate a token for date, url, email, phone and number, remove blank line, remove numbers and remove empty rowns.    
+This strategy keeps important information that could be lost in the next text processing operations.
+
+```{r regex, eval=FALSE}
+clean <- function(email_raw){
+        prep <- stri_replace_all(email_raw, regex = "[^ a-zA-Z0-9!',\\-./:;?@()]+|\"", replacement = "")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(I'm|Im)"%s+%"\\b", replacement = "I am")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(lets|let's)"%s+%"\\b", replacement = "let us")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(cant|can't)"%s+%"\\b", replacement = "cannot")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(wont|won't)"%s+%"\\b", replacement = "will not")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(he|she|it|how|that|there|what|when|who|why|where)'?s"%s+%"\\b", replacement = "$1 is")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(do|did|does|could|must|is|are|was|were|have|had|has|would|should)n'?t"%s+%"\\b", replacement = "$1 not")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(you|i|we|they|would|should|could|might|must)'?ve"%s+%"\\b", replacement = "$1 have")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(you|we|they)'?re"%s+%"\\b", replacement = "$1 are")
+        prep <- stri_replace_all(prep, regex = "\\b"%s+%"(i|you|he|she|it|we|they|that|who|that|who|what|where|when|why|how)'?ll"%s+%"\\b", replacement = "$1 will")
+        prep <- stri_replace_all(prep, regex = " ?([\\w_.-]+)@([\\w.-]+)\\.([\\w.]{2,6}) ?", replacement = " <email> ")
+        prep <- stri_replace_all(prep, regex =" ?(https?:/+)?([\\w]+[\\.]){1,4}[a-z]{2,4}[/\\w-!=?@_\\d]* ?", replacement = " <url> ", simplify = T, omit_no_match = T)
+        prep <- stri_replace_all(prep, regex = " ([0-1][1-2]|[1-9])[/]([0-2][0-9]|3[01]|[1-9])([/]([0-9]{4}|[0-9]{2}))?|[1-9]0s|[0-9]{4}s ", replacement = " <date> ")
+        prep <- stri_replace_all(prep, regex ="\\b(([0-1]?[0-9]|2[1-4])([:][0-5]?[0-9]){1,2} ?([ap][. ]?[m][. ]?)? ?)|\\b([0-1]?[0-9]|2[1-4])(-\\d+)? ?[ap][. ]?[m][. ]?\\b", replacement =" <time> ")
+        prep <- stri_replace_all(prep, regex ="\\b[ :-]?1?[-(.]*[\\d]{3}[-.)]* ?[\\d]{3}[-.]? ?[\\d]{4}\\b ?", replacement= " <phone> ")
+        prep <- stri_replace_all(prep, regex = "(?<=[!/,.:;?#])[!,.:;#?]+|'+|<+[^a-z0-9]", replacement = "")
+        prep <- stri_replace_all(prep, regex = "[^ a-zA-Z0-9<>#]+", replacement = " ")
+        prep <- stri_replace_all(prep, regex ="\\b[\\d]+([-,.\\d]+)?(th|st|nd|rd)?", replacement= " <num> ")
+        prep <- stri_replace_all(prep, regex = "^ +|(?<= ) +| +$", replacement = "")
+        prep <- prep[lapply(prep, nchar)>0]
+        return(prep)
+}
+``` 
+Reading the files
+```{r read, eval=FALSE}
+all.spam<-get.all("data/spam_2/")
+all.ham<-get.all("data/easy_ham_2/")
+``` 
+Moving to data frame
+```{r df, eval=FALSE}
+all.spam_df<-data.frame(all.spam)
+all.ham_df<-data.frame(all.ham)
+```
+
+Remove rown name
+```{r remove_row, eval=FALSE}
+row.names(all.spam_df)<-NULL
+row.names(all.ham_df)<-NULL
+```
+Clean the files
+```{r clean, eval=FALSE}
+clean_spam<-data.frame(apply(all.spam_df, 1, function(x) clean(x)))
+clean_ham<-data.frame(apply(all.ham_df, 1, function(x) clean(x)))
+```
+
+```{r save, echo=FALSE, eval=FALSE}
+save(clean_spam,clean_ham,file="clean.RData") # due to high processing time is neccessary save and load
+```
+```{r load, echo=FALSE, eval=TRUE}
+load(file="clean.RData")
+```
+
+Set the data frame
+```{r set, eval=TRUE}
+clean_spam$V2<-1
+clean_ham$V2<-0
+colnames(clean_spam)<-c("text","spam")
+colnames(clean_ham)<-c("text","spam")
+```
+
+Check email text cleaned
+```{r check, eval=TRUE}
+head(strwrap(clean_spam$text[1]),10)
+```
+Bind spam and ham email data frames
+```{r bind, eval=FALSE}
+email<-rbind(clean_ham, clean_spam)
+```
+
+#### **Document Term Matrix**
+Now is time to convert the files in a vector and extract the word frequencies to do the prediction A tm package and `DocumentTermMatrix()` function was used. This function generates a matrix where the rows correspond to documents, and the columns correspond to the words and the cells are the number of times each word apperas in each document.
+
+Change to a vector
+```{r vector, eval=FALSE}
+corpus <- Corpus(VectorSource(email$text))
+```
+Create a document term matrix
+```{r dtm, eval=FALSE}
+dtm<-DocumentTermMatrix(corpus, control = list(wordLengths = c(1,10)))
+```
+Remove words from the dtm matrix with are rare 
+```{r sparse, eval=FALSE}
+sdtm=removeSparseTerms(dtm, 0.98)
+```
+Organize the file for predict
+```{r org, eval=FALSE}
+sdtm_df=as.data.frame(as.matrix(sdtm))
+colnames(sdtm_df) = make.names(colnames(sdtm_df))
+sdtm_df$spam=email$spam
+sdtm_df$spam<-as.factor(sdtm_df$spam)
+```
+
+#### **Sample the file for predict**
+Split the document in two subsets one for **train** the model and other for **test** the model.
+Was used the relation 70/30 of the data, where 70% was for train the model and 30% for test the model.
+
+```{r sample, eval=FALSE}
+set.seed(1234)
+split <- sample.split(sdtm_df$spam, SplitRatio=0.7)
+train <- sdtm_df[split==TRUE, ]
+test <- sdtm_df[split==FALSE, ]
+rbind("original dataset" = dim(sdtm_df),"training set" = dim(train))
+```
+
+####**Logistic Regression Model**
+Was generate a model with logistic regression from the function **`glm`**. The response was spam or ham and the variable was the words frequencies from the train dataset.
+
+Build model from logistic regression
+```{r lgregress, eval=FALSE}
+spamlg = glm(spam~., data=train, family="binomial")
+```
+
+Prediction model
+```{r predlgregress, eval=FALSE}
+test_lgpred=predict(spamlg, newdata=test, type="response")
+```
+
+####**Random Forest Model**
+Was generate a model with random forest from the package `randomForest`and function **`randomForest`** and **`predict`**. The response was spam or ham and the variable was the words frequencies from the train dataset.
+
+Build model from random forest
+```{r rfregress, eval=FALSE}
+set.seed(1234)
+train_rf=randomForest(spam~.,data=train)
+```
+
+Prediction model
+```{r predrfregress, eval=FALSE}
+test_rfpred = predict(train_rf, newdata=test, type="prob")[,2]
+```
+
+```{r save2, echo=FALSE, eval=FALSE}
+save(test_lgpred, test_rfpred, test, file="pred.Rdata") # due to high processing time is neccessary save and load
+```
+```{r load2, echo=FALSE, eval=TRUE}
+load(file="pred.Rdata") 
+```
+
+####**Model diagnostic**
+Is time to check the quality of our models and compare the two
+
+####Logistic regression diagnostic
+Confusion matrix
+
+```{r cmlr, echo=TRUE, eval=TRUE}
+t1<-table(test_lgpred > 0.5, test$spam)
+colnames(t1)<-c("actual ham", "spam")
+rownames(t1)<-c("predic ham","spam")
+t1 
+```
+Evaluation metrics
+```{r evallg, echo=TRUE, eval=TRUE}
+TP1<-t1[2,2]
+FN1<-t1[1,2]
+FP1<-t1[2,1]
+TN1<-t1[1,1]
+
+round((t1[1,1]+t1[2,2])/nrow(test),4)*100 # accuracy logistic regression
+round(TP1/(TP1+FP1),4)*100 # precision logistic regression
+round(TP1/(TP1+FN1),4)*100 # sensitivity logistic regression
+round(TN1/(TN1+FP1),4)*100 # specificity logistic regression
+```
+
+####Randon Forest diagnostic
+Confusion matrix
+
+```{r cmrf, echo=TRUE, eval=TRUE}
+t2<-table(test_rfpred>0.5, test$spam)
+colnames(t2)<-c("actual ham", "spam")
+rownames(t2)<-c("predic ham", "spam")
+t2
+```
+Evaluation metrics
+```{r evalrf, echo=TRUE, eval=TRUE}
+TP2<-t2[2,2]
+FN2<-t2[1,2]
+FP2<-t2[2,1]
+TN2<-t2[1,1]
+
+round((t2[1,1]+t2[2,2])/nrow(test),4)*100 # accuracy random forest
+round(TP2/(TP2+FP2),4)*100 # precision random forest
+round(TP2/(TP2+FN2),4)*100 # sensitivity random forest
+round(TN2/(TN2+FP2),4)*100 # specificity random forest
+```
+####Receiver Operating Charcteristic
+Plot the ROC and calculate the AUC, area under the curve, for logistic regression model and random forest.
+
+```{r lib_roc, echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE}
+library(pROC) 
+```
+
+```{r roc, echo=TRUE, eval=TRUE}
+roc<-roc(predictor=test_lgpred,response=test$spam) # logistic regression
+roc1<-roc(predictor=test_rfpred, response=test$spam) # random forest
+plot(roc, col="blue", main="Receiver Operating Characteristics - curve")
+par(new=TRUE)
+plot(roc1, col="green",xaxt="n",yaxt="n")
+legend("right", legend=c("log regression", "random forest"), col=c("blue", "green"), lty=1)
+```
+
+###**CONCLUSION**
+The results are conclusive, the performance of the random forest model was much better than the logistic regression model, the accuracy was 97.38% versus 75.92% of logistic regression.  
+The model was very accurate, only 22 wrong classifications in 839. The area under the curve was 0.9977 at random forest, was vey high close to perfect.  
+All strategy and the effort in the regex also help for this great result.
+
+
+####References
+1- [Coursera JHU Data Science Specialization](https://www.coursera.org/specializations/jhu-data-science)  
+2- [Stanford NPL](http://online.stanford.edu/course/natural-language-processing)  
+3- [Wikipedia Random Forest](https://en.wikipedia.org/wiki/Random_forest)   
+4- [www.r-bloggers.com](www.r-bloggers.com/classifying-emails-as-spam-or-ham-using-rtexttools/)  
+
+
+
