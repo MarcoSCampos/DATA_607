@@ -1,0 +1,45 @@
+---
+title: "Discussion wk11 - Recommender System"
+author: "Marco Siqueira Campos"
+date: "8 de novembro de 2016"
+fontsize: 12pt
+mainfont: Arial
+output: html_document
+---
+
+**Recommendation System:[Spotify](www.spotify.com)**
+
+Spotify is on demand music streaming service with more than 20 Millions of songs and 24 Millions of active users.
+
+Spotify provide proper recommendation on the music which needs to be listened.
+
+a) What is the target users?  
+The users are all people all over the world who want to listen streaming music in computer, tablet or cel phone.  
+
+b) What is the key goal?  
+Make users use and have preference when listening to music, the more users will like it the greater will be the loyalty and profitable of service. The recommedation is key to provide personalized experience to users, helt to give the "music" that the user want.
+
+c) We can you help them accomplish their goals?  
+The goals are obtained when is provide the right recommedation according to the users likes. More the users likes more time listen music, more loyalty will be.
+
+d) Attempt to reverse engineer what you can about the site, from the site interface and any available information that you can find on the Internet or elsewhere.
+
+Spotify recommedation system:  
+[http://www.slideshare.net/MrChrisJohnson/algorithmic-music-recommendations-at-spotify](http://www.slideshare.net/MrChrisJohnson/algorithmic-music-recommendations-at-spotify)
+
+The main algorithm is collaborative filtering.
+
+e) Include specific recommendations about how to improve the site's recommendation capabilities going forward.  
+
+The system is nice get information from several sources like implicit through streaming behavior and explicit "rates" from the user.  
+
+Like any system always it has something to improve:  
+        1) New and unpopular music is not recommend.  
+        2) In the radio function there is no "back" button.  
+        3) The recommedation system is good but is not excelent, I always adds some music by myself.  
+        4) User mood is not taken into account, I needed to create several playlist for different things or moods.
+        
+And other important thing, out of recommedation system, despite the 20 Millions of songs this library for me is very limited.      
+
+To improve, in my view, is to solve the issues above. 
+
