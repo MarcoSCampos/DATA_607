@@ -1,0 +1,164 @@
+---
+title: "Project 4"
+#author: "Marco Siqueira Campos"
+#date: "13 de novembro de 2016"
+fontsize: 12pt
+mainfont: Arial
+output: html_document
+---
+
+####*<span style="color:blue">Marco Siqueira Campos</span>, November 13th, 2016* 
+
+####DATA 607  
+####MSDA CUNY
+####Assignment: Project 4 - NoSQL migration
+
+github [link](https://github.com/MarcoSCampos/DATA_607)
+
+### **INTRODUCTION**
+
+Very simply migration example from R to MySQL, MySQL to R, R to MongoDB. 
+Although the simplicity of what I did, is quite challenging because there are several details that need to be accomplished step by step, such as installing MongoDB, which is not automatic. 
+
+#### First step install MongoDB
+The MongoDB was installed from MongoDB site and was follow all step by step.
+[MongoDB download site](https://docs.mongodb.com/v3.2/tutorial/install-mongodb-on-windows/)
+
+#### Create data base
+
+Load library
+Library required for the assignment and RMySQL set
+```{r library, eval=TRUE, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(RMySQL)
+library(mongolite)
+library(RMongo)
+rmysql.settingsfile<-"C:/ProgramData/MySQL/MySQL Server 5.7/my.ini"
+```
+
+Data base  
+To create the data base a sample of diamonds data base from R ggplot was used.
+A sample of 500 was defined to reduce the time to do all things, the original database has 53940 observations.
+
+```{r sample, eval=TRUE}
+data("diamonds")
+set.seed(1234)
+dia<-data.frame(diamonds[sample(nrow(diamonds),500),])
+```
+Change the column name table to avoid trouble at MySQL data base, and check the data.
+
+```{r checkdb, eval=TRUE}
+colnames(dia)[6]<-"table_d"
+str(dia)
+head(dia)
+```
+
+#### Create MySQL data base
+Connect and create the database at MySQL, from R diamond data 
+
+```{r mysql, eval=TRUE}
+sqldb <- dbConnect(MySQL(), default.file=rmysql.settingsfile, user=NULL, password=NULL)
+dbSendQuery(sqldb, 'CREATE SCHEMA IF NOT EXISTS Diam_db;')
+dbSendQuery(sqldb, 'USE Diam_db;')
+dbSendQuery(sqldb, 'DROP TABLE IF EXISTS diam_tbl;')
+dbWriteTable(sqldb, "diam_tbl", dia, append = TRUE, row.names = FALSE)
+dbSendQuery(sqldb, "ALTER TABLE diam_tbl
+            MODIFY COLUMN carat REAL NOT NULL,
+            MODIFY COLUMN cut VARCHAR(12) NOT NULL,
+            MODIFY COLUMN color VARCHAR(2) NOT NULL,
+            MODIFY COLUMN clarity VARCHAR(8) NOT NULL,
+            MODIFY COLUMN depth REAL NOT NULL,
+            MODIFY COLUMN table_d REAL NOT NULL,    
+            MODIFY COLUMN price INT NOT NULL,
+            MODIFY COLUMN x REAL NOT NULL,
+            MODIFY COLUMN y REAL NOT NULL,
+            MODIFY COLUMN z REAL NOT NULL;")
+```
+
+Check the fields
+```{r fields, eval=TRUE}
+dbListFields(sqldb,'diam_tbl')
+```
+
+#### Retrive data base from MySQL to R
+
+Retrive and check the data
+```{r retrive, eval=TRUE}
+rs=dbSendQuery(sqldb, "select * FROM diam_tbl")
+dia_mysql=fetch(rs, n=-1)
+head(dia_mysql)
+```
+
+#### Connnect and send to Mongo the data base from MySQL
+
+The first step is run the MongoDB at windows enviromnent 
+typing the follow at cmd windows 
+
+`> mongod`
+
+Send the data base to mongoDB
+```{r mongo, eval=TRUE}
+m1 <- mongo(collection = "diam")
+m1$insert(dia_mysql) 
+```
+Perform a query and retrive data and compare with data base sent
+```{r mongo_check, eval=TRUE}
+out<-m1$find('{"color":"H","price":{"$lt":1000}}')
+nrow(out)
+nrow(subset(dia_mysql, color=="H"&price<1000))
+```
+
+factors of cut variable, checking MongoDB running 
+```{r cut_fact, eval=TRUE}
+m1$distinct("cut")
+```
+Boxplot with data retrive directly from MongoDB 
+boxplot price by diamond clarity
+```{r Box-plot, eval=TRUE}
+bp<-m1$find('{}', '{"price":1,"clarity":1,"_id":0}')
+ggplot(bp, aes(x=clarity, y=price))+
+        geom_boxplot()
+```
+
+remove collection
+```{r remove, eval=TRUE}
+m1$drop()
+```
+
+### Advantages and disadvanges in relational database vs NoSQL database.
+The two database systems act in a very diverse way, having advantages and disadvantages like any system. The use of each, I think, more appropriate to certain applications, are competitors but are more complementary, ie for certain applications NoSQL will be better and for others the RMSQ will be.
+ 
+ **NoSQL Advantages**   
+ 
+1- Elastic scaling.    
+Due to increasing demand in transactions, more and more databases are moving to cloud or virtualized environments. NoSQL is designed to transparently expand to take advantage of this new environment.  
+2- Economics.   
+By moving the data base to the cloud the scale and easily on commodity cluster, advantage of the hardware become economically very attractive.  
+3- Flexibility data models.    
+NoSQL can store any database structure, being more flexible or accepting even without structure.
+
+**RMSQL Advantages**  
+
+1- Maturity.  
+Years of improvement and utilization make RDBMS a very stable and reliable system.  
+2- Support.    
+Training and support for RDBMS has wide availability plus a large supply of skilled labor.
+3- Analytics and BI.  
+One of the objectives of the database is extraction and analysis. Added to a base of skilled people with the ease of language for the query, it makes it simple in organizations. Making a simple query in NoSQL demands an experienced programmer as it is much more complex.      
+4- Integrity.  
+All RDBMS follow the ACID (Atomicity, Consistency, Isolation and Durability) compliance, this is not true for NoSQL. This the price for performance, scalability and less structured data models.
+
+
+As Elleen McNutty-Holmes said^4^*If your data needs are changing rapidly, you need high throughput to handle viral growth, or your data is growing fast and you need to be able to scale out quickly and efficiently, maybe NoSQL is for you. But if the data you have isn't changing in structure and you're experiencing moderate, manageable growth, your needs may be best met by SQL technologies. Certainly, SQL is not dead yet.*
+
+Besides the practical exercise, the two texts below^3^ ^4^ helped me to get a better understanding of the difference between the two database models.
+
+#### References
+1- [https://cran.r-project.org/web/packages/mongolite/mongolite.pdf](https://cran.r-project.org/web/packages/mongolite/mongolite.pdf)  
+2-[https://cran.r-project.org/web/packages/mongolite/vignettes/intro.html](https://cran.r-project.org/web/packages/mongolite/vignettes/intro.html)  
+3-[http://www.techrepublic.com/blog/10-things/10-things-you-should-know-about-nosql-databases/](http://www.techrepublic.com/blog/10-things/10-things-you-should-know-about-nosql-databases/)  
+4-[http://dataconomy.com/sql-vs-nosql-need-know/](http://dataconomy.com/sql-vs-nosql-need-know/)
+
+
+
+
