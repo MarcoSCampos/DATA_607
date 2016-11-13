@@ -13,3 +13,4 @@
 ### week 5 assignment - tidy - file: SiqueiraCampos_wk5.html - html file
 ### week 10 assignment Doc classification - email classification - Rmarkdown file
 ### week 11 discussion - Recommender Sytem
+### project 4 assignment - NoSQL migration - markdown file
